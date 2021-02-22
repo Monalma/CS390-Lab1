@@ -5,10 +5,11 @@
 import os
 import numpy as np
 import tensorflow as tf
+from sklearn.model_selection import train_test_split
 from tensorflow import keras
 from tensorflow.keras.utils import to_categorical
 import random
-from sklearn.metrics import f1_score
+from sklearn import datasets
 import pandas
 
 # Setting random seeds to keep everything deterministic.
@@ -28,10 +29,10 @@ IMAGE_SIZE = 784
 # Use these to set the algorithm to use.
 # ALGORITHM = "guesser"
 
-ALGORITHM = "custom_net"
-
-
-# ALGORITHM = "tf_net"
+# ALGORITHM = "custom_net"
+#
+#
+ALGORITHM = "tf_net"
 
 
 class NeuralNetwork_2Layer():
@@ -162,7 +163,8 @@ def trainModel(data):
         activationFunction = "sig"
         totalLayers = 2
 
-        customNet = NeuralNetwork_2Layer(inputSize, outputSize, neuronsPerLayer, learningRate, totalLayers, activationFunction)
+        customNet = NeuralNetwork_2Layer(inputSize, outputSize, neuronsPerLayer, learningRate, totalLayers,
+                                         activationFunction)
 
         customNet.train(xTrain, yTrain)
         return customNet
@@ -199,7 +201,7 @@ def runModel(data, model):
         raise ValueError("Algorithm not recognized.")
 
 
-def evalResults(data, preds):  # TODO: Add F1 score confusion matrix here.
+def evalResults(data, preds, iris):  # TODO: Add F1 score confusion matrix here.
     xTest, yTest = data
     confusionMatrix = np.zeros([preds.shape[1], preds.shape[1]])
     acc = 0
@@ -210,15 +212,40 @@ def evalResults(data, preds):  # TODO: Add F1 score confusion matrix here.
         if predictedValue == actualValue:
             acc = acc + 1
 
-    labels = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]
+    iteration = 0
+    if iris is False:
+        labels = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]
+        iteration = 10
+    else:
+        labels = ["0", "1", "2"]
+        iteration = 3
     x = confusionMatrix.astype(int)
 
     df = pandas.DataFrame(x, columns=labels, index=labels)
+
+    f1Score = []
+    predictedRow = df.sum(axis=0)
+    actualRow = df.sum(axis=1)
+
+    for i in range(iteration):
+        if predictedRow[i] == 0:
+            f1Score.append(0)
+            continue
+        truePositive = x[i][i]
+        falsePositive = predictedRow[i] - truePositive
+        falseNegative = actualRow[i] - truePositive
+        precision = truePositive / (truePositive + falsePositive)
+        recall = truePositive / (truePositive + falseNegative)
+        f1 = (2 * precision * recall) / (precision + recall)
+        f1Score.append(f1)
 
     df.loc['Total', :] = df.sum(axis=0)
     df.loc[:, 'Total'] = df.sum(axis=1)
     pandas.set_option("display.max_rows", None, "display.max_columns", None)
     print(df)
+    print()
+    newdf = pandas.DataFrame(f1Score, columns=["F1Score"], index=labels)
+    print(newdf)
     print()
 
     accuracy = acc / preds.shape[0]
@@ -234,7 +261,20 @@ def main():
     data = preprocessData(raw)
     model = trainModel(data[0])
     preds = runModel(data[1][0], model)
-    evalResults(data[1], preds)
+    evalResults(data[1], preds, False)
+
+    # In order to run this with IRIS dataset, uncomment the lines below.
+
+    # irisData = datasets.load_iris()
+    # X = irisData.data
+    # Y = irisData.target
+    # xTrain, xTest, yTrain, yTest = train_test_split(X, Y)
+    # yTrain = to_categorical(yTrain, 3)
+    # yTest = to_categorical(yTest, 3)
+    # nn = NeuralNetwork_2Layer(4, 3, 150, learningRate=0.01)
+    # nn.train(xTrain, yTrain, epochs=100, mbs=15)
+    # preds = nn.predict(xTest)
+    # evalResults((xTest, yTest), preds, True)
 
 
 if __name__ == '__main__':
