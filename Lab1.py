@@ -8,6 +8,7 @@ import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras.utils import to_categorical
 import random
+from sklearn.metrics import f1_score
 import pandas
 
 # Setting random seeds to keep everything deterministic.
@@ -94,7 +95,6 @@ class NeuralNetwork_2Layer():
             layer1 = self.__sigmoid(np.dot(inp, self.W1))
             layer2 = self.__sigmoid(np.dot(layer1, self.W2))
         else:
-            print("CHECK")
             layer1 = self.__relu(np.dot(inp, self.W1))
             layer2 = self.__relu(np.dot(layer1, self.W2))
         return layer1, layer2
@@ -178,7 +178,7 @@ def trainModel(data):
             loss=keras.losses.categorical_crossentropy,
             metrics=["accuracy"],
         )
-        model.fit(xTrain, yTrain, epochs=2)
+        model.fit(xTrain, yTrain, epochs=75)
         return model
     else:
         raise ValueError("Algorithm not recognized.")
@@ -214,6 +214,7 @@ def evalResults(data, preds):  # TODO: Add F1 score confusion matrix here.
     x = confusionMatrix.astype(int)
 
     df = pandas.DataFrame(x, columns=labels, index=labels)
+
     df.loc['Total', :] = df.sum(axis=0)
     df.loc[:, 'Total'] = df.sum(axis=1)
     pandas.set_option("display.max_rows", None, "display.max_columns", None)
